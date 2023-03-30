@@ -10,12 +10,12 @@ using static RayTracing;
 public class RayTracing : MonoBehaviour
 {
     public ComputeShader CompShader;
+    public float SpherePlacementRadius = 100f;
     public int SphereSeed;
     public Light DirectionalLight;
     public Texture SkyboxTexture;
     public Vector2 SphereRadius = new Vector2(3.0f, 8.0f);
     public uint SpheresMax = 100;
-    public float SpherePlacementRadius = 100f;
 
     private Camera camera;
     private ComputeBuffer SphereBuffer;
@@ -27,9 +27,11 @@ public class RayTracing : MonoBehaviour
 
     public struct Sphere
     {
-        public Vector3 position;
         public float radius;
+        public float smoothness;
         public Vector3 albedo;
+        public Vector3 emission;
+        public Vector3 position;
         public Vector3 specular;
     }
 
@@ -61,7 +63,7 @@ public class RayTracing : MonoBehaviour
 
             SphereBuffer.Release();
 
-            SphereBuffer = new ComputeBuffer(SphereList.Count, 40);
+            SphereBuffer = new ComputeBuffer(SphereList.Count, 56);
             SphereBuffer.SetData(SphereList);
         }
         if (DirectionalLight.transform.hasChanged)
@@ -165,14 +167,25 @@ public class RayTracing : MonoBehaviour
                 continue;
 
             Color color = Random.ColorHSV();
-            bool metal = Random.value < 0.5f;
-            sphere.albedo = metal ? Vector3.zero : new Vector3(color.r, color.g, color.b);
-            sphere.specular = metal ? new Vector3(color.r, color.g, color.b) : Vector3.one * 0.04f;
+            bool Emission = Random.value < 0.15f;
+
+            if (Emission)
+            {
+                Color emission = Random.ColorHSV(0, 1, 0, 1, 3.0f, 8.0f);
+                sphere.emission = new Vector3(emission.r, emission.g, emission.b);
+            }
+            else
+            {      
+                bool metal = Random.value < 0.5f;
+                sphere.albedo = metal ? Vector3.zero : new Vector3(color.r, color.g, color.b);
+                sphere.specular = metal ? new Vector3(color.r, color.g, color.b) : Vector3.one * 0.04f;
+                sphere.smoothness = Random.value;
+            }
 
             Spheres.Add(sphere);
         }
 
-        SphereBuffer = new ComputeBuffer(Spheres.Count, 40);
+        SphereBuffer = new ComputeBuffer(Spheres.Count, 56);
         SphereBuffer.SetData(Spheres);
 
         SphereList = Spheres;
