@@ -4,10 +4,13 @@
 #pragma kernel CSMain
 
 RWTexture2D<float4> Result;
-float4x4 _CameraToWorld;
-float4x4 _CameraInverseProjection;
+
+float _Seed;
+float2 _Pixel;
 float2 _PixelOffset;
 float4 _DirectionalLight;
+float4x4 _CameraToWorld;
+float4x4 _CameraInverseProjection;
 
 Texture2D<float4> _SkyboxTexture;
 SamplerState sampler_SkyboxTexture;
@@ -68,6 +71,13 @@ Ray CreateCameraRay(float2 uv)
     direction = normalize(direction);
 
     return CreateRay(origin, direction);
+}
+
+float rand()
+{
+    float result = frac(sin(_Seed / 100.0f * dot(_Pixel, float2(12.9898f, 78.233f))) * 43758.5453f);
+    _Seed += 1.0f;
+    return result;
 }
 
 void IntersectGroundPlane(Ray ray, inout RayHit bestHit)
@@ -157,6 +167,8 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 {
     uint width, height;
     Result.GetDimensions(width, height);
+
+    _Pixel = id.xy;
 
     float2 uv = float2((id.xy + _PixelOffset) / float2(width, height) * 2.0f - 1.0f);
 

@@ -10,6 +10,7 @@ using static RayTracing;
 public class RayTracing : MonoBehaviour
 {
     public ComputeShader CompShader;
+    public int SphereSeed;
     public Light DirectionalLight;
     public Texture SkyboxTexture;
     public Vector2 SphereRadius = new Vector2(3.0f, 8.0f);
@@ -20,6 +21,7 @@ public class RayTracing : MonoBehaviour
     private ComputeBuffer SphereBuffer;
     private List<Sphere> SphereList = new List<Sphere>();
     private Material AntiAliasingMaterial;
+    private RenderTexture Converged;
     private RenderTexture Target;
     private uint CurrentSample = 0;
 
@@ -76,11 +78,13 @@ public class RayTracing : MonoBehaviour
     private void SetShaderParameters()
     {
         Vector3 forward = DirectionalLight.transform.forward;
-        CompShader.SetVector("_DirectionalLight", new Vector4(forward.x, forward.y, forward.z, DirectionalLight.intensity));
+        
         CompShader.SetBuffer(0, "_Spheres", SphereBuffer);
-        CompShader.SetTexture(0, "_SkyboxTexture", SkyboxTexture);
+        CompShader.SetFloat("_Seed", Random.value);
         CompShader.SetMatrix("_CameraToWorld", camera.cameraToWorldMatrix);
         CompShader.SetMatrix("_CameraInverseProjection", camera.projectionMatrix.inverse);
+        CompShader.SetTexture(0, "_SkyboxTexture", SkyboxTexture);
+        CompShader.SetVector("_DirectionalLight", new Vector4(forward.x, forward.y, forward.z, DirectionalLight.intensity));
         CompShader.SetVector("_PixelOffset", new Vector2(Random.value, Random.value));
     }
 
@@ -99,7 +103,8 @@ public class RayTracing : MonoBehaviour
 
         CompShader.Dispatch(0, x, y, 1);
 
-        Graphics.Blit(Target, destination, AntiAliasingMaterial);
+        Graphics.Blit(Target, Converged, AntiAliasingMaterial);
+        Graphics.Blit(Converged, destination);
 
         CurrentSample++;
     }
@@ -117,10 +122,22 @@ public class RayTracing : MonoBehaviour
 
             CurrentSample = 0;
         }
+
+        if (Converged == null || Converged.width != Screen.width || Converged.height != Screen.height)
+        {
+            if (Converged != null)
+                Converged.Release();
+
+            Converged = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+            Converged.enableRandomWrite = true;
+            Converged.Create();
+        }
     }
 
     private void SetupScene()
     {
+        Random.InitState(SphereSeed);
+
         List<Sphere> Spheres = new List<Sphere>();
 
         for (int x = 0; x < SpheresMax; x++)
