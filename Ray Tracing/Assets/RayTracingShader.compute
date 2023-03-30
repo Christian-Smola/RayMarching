@@ -73,11 +73,46 @@ Ray CreateCameraRay(float2 uv)
     return CreateRay(origin, direction);
 }
 
+float energy(float3 color)
+{
+    return dot(color, 1.0f / 3.0f);
+}
+
+float sdot(float3 x, float3 y, float f = 1.0f)
+{
+    return saturate(dot(x, y) * f);
+}
+
 float rand()
 {
     float result = frac(sin(_Seed / 100.0f * dot(_Pixel, float2(12.9898f, 78.233f))) * 43758.5453f);
     _Seed += 1.0f;
     return result;
+}
+
+float3x3 GetTangentSpace(float3 normal)
+{
+    //Choose helper Vector for the cross product
+    float3 helper = float3(1, 0, 0);
+
+    if (abs(normal.x) > 0.99f)
+        helper = float3(0, 0, 1);
+    
+    float3 tangent = normalize(cross(normal, helper));
+    float3 binormal = normalize(cross(normal, tangent));
+
+    return float3x3(tangent, binormal, normal);
+}
+
+float3 SampleHemisphere(float3 normal)
+{
+    //Uniformly sample hemisphere direction
+    float cosTheta = rand();
+    float sinTheta = sqrt(max(0.0f, 1.0f - cosTheta * cosTheta));
+    float phi = 2 * PI * rand();
+    float3 tangentSpaceDir = float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+
+    return mul(tangentSpaceDir, GetTangentSpace(normal));
 }
 
 void IntersectGroundPlane(Ray ray, inout RayHit bestHit)
@@ -136,21 +171,48 @@ float3 Shade(inout Ray ray, RayHit hit)
 {
     if (hit.distance < 1.#INF)
     {
-        bool shadow = false;
+        //bool shadow = false;
 
-        Ray shadowRay = CreateRay(hit.position + hit.normal * 0.001f, -1 * _DirectionalLight.xyz);
-        RayHit shadowHit = Trace(shadowRay);
+        //Ray shadowRay = CreateRay(hit.position + hit.normal * 0.001f, -1 * _DirectionalLight.xyz);
+        //RayHit shadowHit = Trace(shadowRay);
 
-        if (shadowHit.distance != 1.#INF)
+        //if (shadowHit.distance != 1.#INF)
+        //{
+        //    return float3(0.0f, 0.0f, 0.0f);
+        //}
+
+        //ray.origin = hit.position + hit.normal * 0.001f;
+        //ray.direction = reflect(ray.direction, hit.normal);
+        //ray.energy *= hit.specular;
+
+        //return saturate(dot(hit.normal, _DirectionalLight.xyz) * -1) * _DirectionalLight.w * hit.albedo;
+
+        hit.albedo = min(1.0f - hit.specular, hit.albedo);
+        float SpecChance = energy(hit.specular);
+        float DiffChance = energy(hit.albedo);
+
+        float sum = SpecChance + DiffChance;
+        SpecChance /= sum;
+        DiffChance /= sum;
+
+        float roulette = rand();
+
+        if (roulette < SpecChance)
         {
-            return float3(0.0f, 0.0f, 0.0f);
+            //Specular reflection
+            ray.origin = hit.position + hit.normal * 0.001f;
+            ray.direction = reflect(ray.direction, hit.normal);
+            ray.energy *= (1.0f / SpecChance) * hit.specular * sdot(hit.normal, ray.direction);
+        }
+        else
+        {
+            //Diffuse reflection
+            ray.origin = hit.position + hit.normal * 0.001f;
+            ray.direction = SampleHemisphere(hit.normal);
+            ray.energy *= (1.0f / DiffChance) * 2 * hit.albedo * sdot(hit.normal, ray.direction);
         }
 
-        ray.origin = hit.position + hit.normal * 0.001f;
-        ray.direction = reflect(ray.direction, hit.normal);
-        ray.energy *= hit.specular;
-
-        return saturate(dot(hit.normal, _DirectionalLight.xyz) * -1) * _DirectionalLight.w * hit.albedo;
+        return 0.0f;
     }
     else
     {
