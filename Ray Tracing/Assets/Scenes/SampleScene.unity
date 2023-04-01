@@ -294,13 +294,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_LocalRotation: {x: 0, y: 0.2588191, z: 0, w: 0.9659258}
-  m_LocalPosition: {x: -50, y: 40, z: -100}
+  m_LocalRotation: {x: 0.044943456, y: -0.95125127, z: 0.16773124, w: 0.25488707}
+  m_LocalPosition: {x: 130, y: 155, z: 200}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 0, y: 30, z: 0}
+  m_LocalEulerAnglesHint: {x: 20, y: -150, z: 0}
 --- !u!114 &963194229
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -314,11 +314,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   CompShader: {fileID: 7200000, guid: 52cb12b658b7acf49b7092b15d08c3d4, type: 3}
+  SpherePlacementRadius: 100
+  SphereSeed: 0
   DirectionalLight: {fileID: 705507994}
   SkyboxTexture: {fileID: 2800000, guid: 837e2055841d7fe41bb5f4d253f284fc, type: 3}
   SphereRadius: {x: 3, y: 8}
   SpheresMax: 100
-  SpherePlacementRadius: 100
 --- !u!114 &963194230
 MonoBehaviour:
   m_ObjectHideFlags: 0

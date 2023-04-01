@@ -14,6 +14,8 @@ float4x4 _CameraInverseProjection;
 
 Texture2D<float4> _SkyboxTexture;
 SamplerState sampler_SkyboxTexture;
+
+static const float EPSILON = 1e-8;
 static const float PI = 3.14159265;
 
 struct Ray
@@ -167,6 +169,48 @@ void IntersectSphere(Ray ray, inout RayHit bestHit, Sphere sphere)
     }
 }
 
+//Credit to Tomas Akenine-Moller and Ben Trumbore
+bool IntersectTriangle(Ray ray, float3 VertA, float3 VertB, float3 VertC, inout float t, inout float u, inout float v)
+{
+    //Find vectors for two edges sharing VertA
+    float3 LineAB = VertB - VertA;
+    float3 LineAC = VertC - VertA;
+
+    //begin calculating determinant - also used to calculate U parameter
+    float3 pvec = cross(ray.direction, LineAC);
+
+    //if determinant is near zero, ray lies in plane of triangle
+    float Determinant = dot(LineAB, pvec);
+
+    //use backface culling
+    if (Determinant < EPSILON)
+        return false;
+
+    float InvertedDeterminant = 1.0f / Determinant;
+
+    //Calculate distance from VertA to ray origin
+    float3 tvec = ray.origin - VertA;
+
+    //Calculate u and test bounds
+    u = dot(tvec, pvec) * InvertedDeterminant;
+
+    if (u < 0.0 || u > 1.0f)
+        return false;
+
+    float3 qvec = cross(tvec, LineAB);
+
+    //Calculate v and test bounds
+    v = dot(ray.direction, qvec) * InvertedDeterminant;
+
+    if (v < 0.0 || u + v > 1.0f)
+        return false;
+
+    //Calculate t, ray intersects triangle
+    t = dot(LineAC, qvec) * InvertedDeterminant;
+
+    return true;
+}
+
 RayHit Trace(Ray ray)
 {
     RayHit bestHit = CreateRayHit();
@@ -179,6 +223,25 @@ RayHit Trace(Ray ray)
         IntersectSphere(ray, bestHit, _Spheres[i]);
 
     IntersectGroundPlane(ray, bestHit);
+
+    float3 VertA = float3(-150, 0, -150);
+    float3 VertB = float3(150, 0, -150);
+    float3 VertC = float3(0, 150 * sqrt(2), -150);
+
+    float t, u, v;
+    if (IntersectTriangle(ray, VertA, VertB, VertC, t, u, v))
+    {
+        if (t > 0 && t < bestHit.distance) {
+            bestHit.distance = t; 
+            //Unable to calculate position using barycentric coords, might be a cause for concern
+            bestHit.position = ray.origin + t * ray.direction;
+            bestHit.normal = normalize(cross(VertB - VertA, VertC - VertA));
+            bestHit.albedo = 0.00f;
+            bestHit.specular = 0.65f * float3(1, 0.4f, 0.2f);
+            bestHit.smoothness = 0.9f;
+            bestHit.emission = 0.0f;
+        }
+    }
     
     return bestHit;
 }
