@@ -19,11 +19,20 @@ public class RayTracing : MonoBehaviour
 
     private Camera camera;
     private ComputeBuffer SphereBuffer;
+    private ComputeBuffer MeshBuffer;
+    private ComputeBuffer VertexBuffer;
+    private ComputeBuffer IndexBuffer;
     private List<Sphere> SphereList = new List<Sphere>();
     private Material AntiAliasingMaterial;
     private RenderTexture Converged;
     private RenderTexture Target;
     private uint CurrentSample = 0;
+
+    private static bool RebuildMeshObjects = false;
+    private static List<GameObject> GameObjectList = new List<GameObject>();
+    private static List<MeshObject> MeshObjectList = new List<MeshObject>();
+    private static List<Vector3> Vertices = new List<Vector3>();
+    private static List<int> Indices = new List<int>();
 
     public struct Sphere
     {
@@ -35,6 +44,13 @@ public class RayTracing : MonoBehaviour
         public Vector3 specular;
     }
 
+    public struct MeshObject
+    {
+        public Matrix4x4 LocalToWorldMatrix;
+        public int Indices_Offset;
+        public int Indices_Count;
+    }
+
     private void Awake()
     {
         camera = GetComponent<Camera>();
@@ -43,13 +59,20 @@ public class RayTracing : MonoBehaviour
     private void OnEnable()
     {
         CurrentSample = 0;
-        SetupScene();
+        SetupMeshes();
+        SetupSpheres();
     }
 
     private void OnDisable()
     {
         if (SphereBuffer != null)
             SphereBuffer.Release();
+        if (MeshBuffer != null)
+            MeshBuffer.Release();
+        if (VertexBuffer != null)
+            VertexBuffer.Release();
+        if (IndexBuffer != null)
+            IndexBuffer.Release();
     }
 
     private void Update()
@@ -59,12 +82,15 @@ public class RayTracing : MonoBehaviour
             CurrentSample = 0;
             transform.hasChanged = false;
 
-            SphereList = SphereList.OrderByDescending(S => Vector3.Distance(S.position, camera.transform.position)).ToList();
+            if (SphereList.Count > 0)
+            {
+                SphereList = SphereList.OrderByDescending(S => Vector3.Distance(S.position, camera.transform.position)).ToList();
 
-            SphereBuffer.Release();
+                SphereBuffer.Release();
 
-            SphereBuffer = new ComputeBuffer(SphereList.Count, 56);
-            SphereBuffer.SetData(SphereList);
+                SphereBuffer = new ComputeBuffer(SphereList.Count, 56);
+                SphereBuffer.SetData(SphereList);
+            }
         }
         if (DirectionalLight.transform.hasChanged)
         {
@@ -73,6 +99,7 @@ public class RayTracing : MonoBehaviour
 
     private void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
+        RebuildMeshObjectBuffers();
         SetShaderParameters();
         Render(destination);
     }
@@ -81,13 +108,17 @@ public class RayTracing : MonoBehaviour
     {
         Vector3 forward = DirectionalLight.transform.forward;
         
-        CompShader.SetBuffer(0, "_Spheres", SphereBuffer);
         CompShader.SetFloat("_Seed", Random.value);
         CompShader.SetMatrix("_CameraToWorld", camera.cameraToWorldMatrix);
         CompShader.SetMatrix("_CameraInverseProjection", camera.projectionMatrix.inverse);
         CompShader.SetTexture(0, "_SkyboxTexture", SkyboxTexture);
         CompShader.SetVector("_DirectionalLight", new Vector4(forward.x, forward.y, forward.z, DirectionalLight.intensity));
         CompShader.SetVector("_PixelOffset", new Vector2(Random.value, Random.value));
+
+        SetComputeBuffer("_Spheres", SphereBuffer);
+        SetComputeBuffer("_MeshObjects", MeshBuffer);
+        SetComputeBuffer("_Vertices", VertexBuffer);
+        SetComputeBuffer("_Indices", IndexBuffer);
     }
 
     private void Render(RenderTexture destination)
@@ -136,7 +167,69 @@ public class RayTracing : MonoBehaviour
         }
     }
 
-    private void SetupScene()
+    private void RebuildMeshObjectBuffers()
+    {
+        if (!RebuildMeshObjects)
+            return;
+
+        RebuildMeshObjects = false;
+        CurrentSample = 0;
+
+        MeshObjectList.Clear();
+        Vertices.Clear();
+        Indices.Clear();
+
+        foreach (GameObject GO in GameObjectList)
+        {
+            Mesh mesh = GO.GetComponent<MeshFilter>().sharedMesh;
+
+            int FirstVertex = Vertices.Count;
+            Vertices.AddRange(mesh.vertices);
+
+            int FirstIndex = Indices.Count;
+            var indices = mesh.GetIndices(0);
+            Indices.AddRange(indices.Select(index => index + FirstVertex));
+
+            MeshObjectList.Add(new MeshObject()
+            {
+                LocalToWorldMatrix = GO.transform.localToWorldMatrix,
+                Indices_Offset = FirstIndex,
+                Indices_Count = indices.Length
+            });
+        }
+
+        CreateComputeBuffer(ref MeshBuffer, MeshObjectList, 72);
+        CreateComputeBuffer(ref VertexBuffer, Vertices, 12);
+        CreateComputeBuffer(ref IndexBuffer, Indices, 4);
+    }
+
+    private static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, List<T> data, int stride) where T : struct
+    {
+        if (buffer != null)
+        {
+            if (data.Count == 0 || buffer.count != data.Count || buffer.stride != stride)
+            {
+                buffer.Release();
+                buffer = null;
+            }
+        }
+
+        if (data.Count != 0)
+        {
+            if (buffer == null)
+                buffer = new ComputeBuffer(data.Count, stride);
+
+            buffer.SetData(data);
+        }
+    }
+
+    private void SetComputeBuffer(string name, ComputeBuffer buffer)
+    {
+        if (buffer != null)
+            CompShader.SetBuffer(0, name, buffer);
+    }
+
+    private void SetupSpheres()
     {
         Random.InitState(SphereSeed);
 
@@ -189,5 +282,20 @@ public class RayTracing : MonoBehaviour
         SphereBuffer.SetData(Spheres);
 
         SphereList = Spheres;
+    }
+
+    private void SetupMeshes()
+    {
+        GameObject Cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Cube.transform.position = new Vector3(-40, 0, 120);
+        Cube.transform.localScale = new Vector3(20, 10, 20);
+        GameObjectList.Add(Cube);
+
+        GameObject Cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        Cylinder.transform.position = new Vector3(-40, 15, 120);
+        Cylinder.transform.localScale = new Vector3(10, 10, 10);
+        GameObjectList.Add(Cylinder);
+
+        RebuildMeshObjects = true;
     }
 }

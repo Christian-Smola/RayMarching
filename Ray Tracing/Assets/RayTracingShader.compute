@@ -47,7 +47,17 @@ struct Sphere
     float3 specular;
 };
 
+struct MeshObject
+{
+    float4x4 localToWorldMatrix;
+    int indices_offset;
+    int indices_count;
+};
+
 StructuredBuffer<Sphere> _Spheres;
+StructuredBuffer<MeshObject> _MeshObjects;
+StructuredBuffer<float3> _Vertices;
+StructuredBuffer<int> _Indices;
 
 Ray CreateRay(float3 origin, float3 direction)
 {
@@ -211,37 +221,51 @@ bool IntersectTriangle(Ray ray, float3 VertA, float3 VertB, float3 VertC, inout 
     return true;
 }
 
+void IntersectMeshObject(Ray ray, inout RayHit bestHit, MeshObject meshObject)
+{
+    uint offset = meshObject.indices_offset;
+    uint count = offset + meshObject.indices_count;
+
+    for (uint i = offset; i < count; i += 3)
+    {
+        float3 VertA = (mul(meshObject.localToWorldMatrix, float4(_Vertices[_Indices[i]], 1))).xyz;
+        float3 VertB = (mul(meshObject.localToWorldMatrix, float4(_Vertices[_Indices[i + 1]], 1))).xyz;
+        float3 VertC = (mul(meshObject.localToWorldMatrix, float4(_Vertices[_Indices[i + 2]], 1))).xyz;
+
+        float t, u, v;
+        if (IntersectTriangle(ray, VertA, VertB, VertC, t, u, v))
+        {
+            if (t > 0 && t < bestHit.distance)
+            {
+                bestHit.distance = t;
+                bestHit.position = ray.origin + t * ray.direction;
+                bestHit.normal = normalize(cross(VertB - VertA, VertC - VertA));
+                bestHit.albedo = 0.0f;
+                bestHit.specular = 0.65f;
+                bestHit.smoothness = 0.99f;
+                bestHit.emission = 0.0f;
+            }
+        }
+    }
+}
+
 RayHit Trace(Ray ray)
 {
     RayHit bestHit = CreateRayHit();
 
-    uint numSpheres, stride;
-
-    _Spheres.GetDimensions(numSpheres, stride);
-
-    for (uint i = 0; i < numSpheres; i++)
-        IntersectSphere(ray, bestHit, _Spheres[i]);
+    uint count, stride, i;
 
     IntersectGroundPlane(ray, bestHit);
 
-    float3 VertA = float3(-150, 0, -150);
-    float3 VertB = float3(150, 0, -150);
-    float3 VertC = float3(0, 150 * sqrt(2), -150);
+    _Spheres.GetDimensions(count, stride);
 
-    float t, u, v;
-    if (IntersectTriangle(ray, VertA, VertB, VertC, t, u, v))
-    {
-        if (t > 0 && t < bestHit.distance) {
-            bestHit.distance = t; 
-            //Unable to calculate position using barycentric coords, might be a cause for concern
-            bestHit.position = ray.origin + t * ray.direction;
-            bestHit.normal = normalize(cross(VertB - VertA, VertC - VertA));
-            bestHit.albedo = 0.00f;
-            bestHit.specular = 0.65f * float3(1, 0.4f, 0.2f);
-            bestHit.smoothness = 0.9f;
-            bestHit.emission = 0.0f;
-        }
-    }
+    for (i = 0; i < count; i++)
+        IntersectSphere(ray, bestHit, _Spheres[i]);
+
+    _MeshObjects.GetDimensions(count, stride);
+
+    for (i = 0; i < count; i++)
+        IntersectMeshObject(ray, bestHit, _MeshObjects[i]);
     
     return bestHit;
 }
