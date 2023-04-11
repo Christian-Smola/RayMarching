@@ -1,5 +1,5 @@
 sceneSetups:
-- path: Assets/Resources/Scenes/SampleScene.unity
+- path: Assets/Resources/Scenes/RayMarchingScene.unity
   isLoaded: 1
   isActive: 1
   isSubScene: 0
