@@ -8,12 +8,25 @@ Texture2D<float4> _SkyboxTexture;
 SamplerState sampler_SkyboxTexture;
 
 static const float PI = 3.14159265f;
+static const float MaxDist = 80;
+static const float Epsilon = 0.001f;
 
 struct Ray
 {
     float3 origin;
     float3 direction;
 };
+
+struct Mesh
+{
+    float3 position;
+    float3 size;
+    float3 color;
+    int shape;
+};
+
+StructuredBuffer<Mesh> Meshes;
+int MeshCount;
 
 Ray CreateRay(float3 origin, float3 direction)
 {
@@ -33,6 +46,61 @@ Ray CreateCameraRay(float2 uv)
     return CreateRay(origin, direction);
 }
 
+float SphereSDF(float3 CameraPos, float3 Center, float Radius)
+{
+    return length(CameraPos - Center) - Radius;
+}
+
+float CubeSDF(float3 CameraPos, float3 Center, float3 Size)
+{
+    float3 Offset = abs(CameraPos - Center) - Size;
+    float UnsignedDistance = length(max(Offset, 0));
+    float DistanceInsideBox = max(max(min(Offset.x, 0), min(Offset.y, 0)), min(Offset.z, 0));
+    return UnsignedDistance + DistanceInsideBox;
+}
+
+float GetMeshSDF(Mesh mesh, float3 pos)
+{
+    if (mesh.shape == 0)
+        return SphereSDF(pos, mesh.position, mesh.size.x);
+    if (mesh.shape == 1)
+        return CubeSDF(pos, mesh.position, mesh.size);
+
+    return MaxDist;
+}
+
+float4 Combine(float distA, float distB, float3 colorA, float3 colorB)
+{
+    float dist = distA;
+    float3 color = colorA;
+
+    if (distB < distA)
+    {
+        dist = distB;
+        color = colorB;
+    }
+
+    return float4(color, dist);
+}
+
+float4 SampleScene(float3 pos)
+{
+    float GlobalDist = MaxDist;
+    float3 GlobalColor = 0;
+
+    for (int x = 0; x < MeshCount; x++)
+    {
+        Mesh mesh = Meshes[x];
+        float MeshDist = GetMeshSDF(mesh, pos);
+
+        float4 GlobalCombined = Combine(GlobalDist, MeshDist, GlobalColor, mesh.color);
+        GlobalColor = GlobalCombined.xyz;
+        GlobalDist = GlobalCombined.w;
+    }
+
+    return float4(GlobalColor, GlobalDist);
+}
+
 
 [numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
@@ -40,12 +108,28 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     uint width, height;
     Result.GetDimensions(width, height);
 
-    float2 uv = float2((id.xy + float2(0.5f, 0.5f)) / float2(width, height) * 2.0f - 1.0f);
+    float2 uv = id.xy / float2(width, height) * 2 - 1;
+    float RayDist = 0;
 
     Ray ray = CreateCameraRay(uv);
+    int MarchSteps = 0;
 
-    float theta = acos(ray.direction.y) / -PI;
-    float phi = atan2(ray.direction.x, -ray.direction.z) / -PI * 0.5f;
+    while (RayDist < MaxDist)
+    {
+        MarchSteps++;
 
-    Result[id.xy] = _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, float2(phi, theta), 0);
+        float4 SampleResult = SampleScene(ray.origin);
+        float dist = SampleResult.w;
+
+        if (dist <= Epsilon)
+        {
+            float3 col = SampleResult.xyz;
+            Result[id.xy] = float4(col, 1);
+
+            break;
+        }
+
+        ray.origin += ray.direction * dist;
+        RayDist += dist;
+    }
 }
