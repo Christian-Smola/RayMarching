@@ -1,6 +1,7 @@
 #pragma kernel CSMain
 
 RWTexture2D<float4> Result;
+float4 _DirectionalLight;
 float4x4 _CameraToWorld;
 float4x4 _CameraInverseProjection;
 
@@ -101,6 +102,20 @@ float4 SampleScene(float3 pos)
     return float4(GlobalColor, GlobalDist);
 }
 
+float3 CalculateNormals(float3 pos)
+{
+    float3 V1 = float3(
+        SampleScene(pos + float3(Epsilon, 0, 0)).w,
+        SampleScene(pos + float3(0, Epsilon, 0)).w,
+        SampleScene(pos + float3(0, 0, Epsilon)).w);
+
+    float3 V2 = float3(
+        SampleScene(pos - float3(Epsilon, 0, 0)).w,
+        SampleScene(pos - float3(0, Epsilon, 0)).w,
+        SampleScene(pos - float3(0, 0, Epsilon)).w);
+
+    return normalize(V1 - V2);
+}
 
 [numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
@@ -124,9 +139,20 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         if (dist <= Epsilon)
         {
             float3 col = SampleResult.xyz;
-            Result[id.xy] = float4(col, 1);
+
+            //Lighting
+            float3 HitPoint = ray.origin + ray.direction * dist;
+            float3 normals = CalculateNormals(HitPoint - ray.direction * Epsilon);
+            float3 Lighting = saturate(dot(normals, _DirectionalLight.xyz) * -1) * _DirectionalLight.w;
+
+            Result[id.xy] = float4(col * Lighting, 1);
 
             break;
+        }
+        else {
+            float theta = acos(ray.direction.y) / -PI;
+            float phi = atan2(ray.direction.x, -ray.direction.z) / -PI * 0.5f;
+            Result[id.xy] = float4(_SkyboxTexture.SampleLevel(sampler_SkyboxTexture, float2(phi, theta), 0).xyz, 1);
         }
 
         ray.origin += ray.direction * dist;
