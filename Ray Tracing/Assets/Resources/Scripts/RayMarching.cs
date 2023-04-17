@@ -31,6 +31,12 @@ public class RayMarching : MonoBehaviour
         SetupScene();
     }
 
+    private void OnDisable()
+    {
+        if (MeshBuffer != null)
+            MeshBuffer.Release();
+    }
+
     private void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
         SetShaderParameters();
@@ -81,6 +87,9 @@ public class RayMarching : MonoBehaviour
 
         //Blue Cube
         MeshList.Add(new Mesh() { Position = new Vector3(-2, -0.5f, 3), Size = new Vector3(1, 1, 1), Color = new Vector3(0, 0, 1), Shape = 1 });
+
+        //Grey Quad (Floor)
+        MeshList.Add(new Mesh() { Position = new Vector3(0, -0.5f, 3), Size = new Vector3(5, 5, 1), Color = new Vector3(0.5f, 0.5f, 0.5f), Shape = 2 });
 
         ComputeBuffer buffer = new ComputeBuffer(MeshList.Count, 40);
         buffer.SetData(MeshList);

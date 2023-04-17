@@ -47,6 +47,11 @@ Ray CreateCameraRay(float2 uv)
     return CreateRay(origin, direction);
 }
 
+float PlaneSDF(float3 pos, float3 normal, float DistFromOrigin)
+{
+    return dot(pos, normal) + DistFromOrigin;
+}
+
 float SphereSDF(float3 CameraPos, float3 Center, float Radius)
 {
     return length(CameraPos - Center) - Radius;
@@ -66,6 +71,8 @@ float GetMeshSDF(Mesh mesh, float3 pos)
         return SphereSDF(pos, mesh.position, mesh.size.x);
     if (mesh.shape == 1)
         return CubeSDF(pos, mesh.position, mesh.size);
+    if (mesh.shape == 2)
+        return PlaneSDF(pos, float3(0, 1, 0), 1.5f);
 
     return MaxDist;
 }
@@ -117,6 +124,31 @@ float3 CalculateNormals(float3 pos)
     return normalize(V1 - V2);
 }
 
+float CalculateHardShadows(Ray ray, float DistToShadePoint)
+{
+    float rayDist = 0;
+    int marchSteps = 0;
+    float shadowIntensity = 0.2f;
+    float brightness = 1;
+
+    while (rayDist < DistToShadePoint)
+    {
+        marchSteps++;
+        float4 sampleResult = SampleScene(ray.origin);
+        float dist = sampleResult.w;
+
+        if (dist <= Epsilon)
+            return shadowIntensity;
+
+        brightness = min(brightness, dist * 200);
+
+        ray.origin += ray.direction * dist;
+        rayDist += dist;
+    }
+
+    return shadowIntensity + (1 - shadowIntensity) * brightness;
+}
+
 [numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
@@ -145,7 +177,17 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             float3 normals = CalculateNormals(HitPoint - ray.direction * Epsilon);
             float3 Lighting = saturate(dot(normals, _DirectionalLight.xyz) * -1) * _DirectionalLight.w;
 
-            Result[id.xy] = float4(col * Lighting, 1);
+            //Shadows
+            float3 offsetPos = HitPoint + normals * 0.05f;
+            float3 dirToLight = -_DirectionalLight;
+
+            ray.origin = offsetPos;
+            ray.direction = dirToLight;
+
+            float distToLight = MaxDist;
+            float Shadows = CalculateHardShadows(ray, distToLight);
+
+            Result[id.xy] = float4(col * Lighting * Shadows, 1);
 
             break;
         }
