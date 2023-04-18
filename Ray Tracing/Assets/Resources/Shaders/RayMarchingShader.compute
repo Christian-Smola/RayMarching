@@ -1,9 +1,12 @@
+//Based on the following article by Inigo Quilez
+//https://iquilezles.org/articles/distfunctions/
 #pragma kernel CSMain
 
 RWTexture2D<float4> Result;
 float4 _DirectionalLight;
 float4x4 _CameraToWorld;
 float4x4 _CameraInverseProjection;
+int _Operation;
 
 Texture2D<float4> _SkyboxTexture;
 SamplerState sampler_SkyboxTexture;
@@ -47,6 +50,11 @@ Ray CreateCameraRay(float2 uv)
     return CreateRay(origin, direction);
 }
 
+float mix(float x, float y, float a)
+{
+    return x * (1 - a) + y * a;
+}
+
 float PlaneSDF(float3 pos, float3 normal, float DistFromOrigin)
 {
     return dot(pos, normal) + DistFromOrigin;
@@ -81,11 +89,37 @@ float4 Combine(float distA, float distB, float3 colorA, float3 colorB)
 {
     float dist = distA;
     float3 color = colorA;
+    float blendValue = 0.3f;
 
-    if (distB < distA)
+    if (_Operation == 0)
     {
-        dist = distB;
-        color = colorB;
+        //Default
+        if (distB < distA)
+        {
+            dist = distB;
+            color = colorB;
+        }
+    }
+    else if (_Operation == 1)
+    {
+        //Blend
+        float h = clamp(0.5f + 0.5f * (distB - distA) / blendValue, 0.0f, 1.0f);
+        dist = lerp(distB, distA, h) - blendValue * h * (1 - h);
+        color = lerp(colorB, colorA, h);
+    }
+    else if (_Operation == 2)
+    {
+        //Union
+        float h = clamp(0.5f + 0.5f * (distB - distA) / blendValue, 0.0f, 1.0f);
+        dist = mix(distB, distA, h) - blendValue * h * (1 - h);
+        color = lerp(colorB, colorA, h);
+    }
+    else if (_Operation == 3)
+    {
+        //Subtraction
+        float h = clamp(0.5f - 0.5f * (distB + distA) / blendValue, 0.0f, 1.0f);
+        dist = mix(distB, -distA, h) + blendValue * h * (1 - h);
+        color = lerp(colorB, colorA, h);
     }
 
     return float4(color, dist);
@@ -191,7 +225,8 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
             break;
         }
-        else {
+        else
+        {
             float theta = acos(ray.direction.y) / -PI;
             float phi = atan2(ray.direction.x, -ray.direction.z) / -PI * 0.5f;
             Result[id.xy] = float4(_SkyboxTexture.SampleLevel(sampler_SkyboxTexture, float2(phi, theta), 0).xyz, 1);

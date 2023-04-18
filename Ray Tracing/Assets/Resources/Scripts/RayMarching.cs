@@ -8,6 +8,7 @@ public class RayMarching : MonoBehaviour
     public Texture SkyboxTexture;
 
     private Camera cam;
+    private int Operation = 1;
     private RenderTexture Target;
 
     private ComputeBuffer MeshBuffer;
@@ -31,6 +32,13 @@ public class RayMarching : MonoBehaviour
         SetupScene();
     }
 
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+            IncrementOperation();
+
+    }
+
     private void OnDisable()
     {
         if (MeshBuffer != null)
@@ -52,6 +60,7 @@ public class RayMarching : MonoBehaviour
         CompShader.SetTexture(0, "_SkyboxTexture", SkyboxTexture);
         CompShader.SetBuffer(0, "Meshes", MeshBuffer);
         CompShader.SetInt("MeshCount", MeshList.Count);
+        CompShader.SetInt("_Operation", Operation);
         CompShader.SetVector("_DirectionalLight", new Vector4(forward.x, forward.y, forward.z, DirectionalLight.intensity));
     }
 
@@ -83,17 +92,25 @@ public class RayMarching : MonoBehaviour
     private void SetupScene()
     {
         //Red Sphere
-        MeshList.Add(new Mesh() { Position = new Vector3(2, -0.5f, 3), Size = new Vector3(1, 1, 1), Color = new Vector3(1, 0, 0), Shape = 0 });
+        MeshList.Add(new Mesh() { Position = new Vector3(0.0f, 1.5f, 3), Size = new Vector3(1, 1, 1), Color = new Vector3(1, 0, 0), Shape = 0 });
 
         //Blue Cube
-        MeshList.Add(new Mesh() { Position = new Vector3(-2, -0.5f, 3), Size = new Vector3(1, 1, 1), Color = new Vector3(0, 0, 1), Shape = 1 });
+        MeshList.Add(new Mesh() { Position = new Vector3(0.0f, 0.0f, 3f), Size = new Vector3(2, 1, 2), Color = new Vector3(0, 0, 1), Shape = 1 });
 
         //Grey Quad (Floor)
-        MeshList.Add(new Mesh() { Position = new Vector3(0, -0.5f, 3), Size = new Vector3(5, 5, 1), Color = new Vector3(0.5f, 0.5f, 0.5f), Shape = 2 });
+        //MeshList.Add(new Mesh() { Position = new Vector3(0, -0.5f, 3), Size = new Vector3(5, 5, 1), Color = new Vector3(0.5f, 0.5f, 0.5f), Shape = 2 });
 
         ComputeBuffer buffer = new ComputeBuffer(MeshList.Count, 40);
         buffer.SetData(MeshList);
 
         MeshBuffer = buffer;
+    }
+
+    private void IncrementOperation()
+    {
+        if (Operation != 3)
+            Operation++;
+        else
+            Operation = 0;
     }
 }
