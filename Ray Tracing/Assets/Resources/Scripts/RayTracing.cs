@@ -313,26 +313,25 @@ public class RayTracing : MonoBehaviour
         CenterCube.transform.position = new Vector3(0, 40f, 0);
         Vector3 albedo = new Vector3(0.8f, 0.8f, 0.8f);
         Vector3 emission = new Vector3(0f, 0f, 0f);
-        Vector3 specular = new Vector3(0f, 0f, 0f);
+        Vector3 specular = new Vector3(1f, 1f, 1f);
         MeshDataList.Add(new MeshData(CenterCube.GetComponent<MeshFilter>().sharedMesh, CenterCube.transform, albedo, emission, specular));
 
-        GameObject LeftCube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        LeftCube.transform.localScale = new Vector3(20, 2, 20);
-        LeftCube.transform.position = new Vector3(-11f, 40f, 0f);
-        LeftCube.transform.localEulerAngles = new Vector3(0, 0, 90);
+        GameObject RedCube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        RedCube.transform.localScale = new Vector3(20, 2, 20);
+        RedCube.transform.position = new Vector3(0f, 34f, 0f);
         albedo = new Vector3(0, 0, 0);
         emission = new Vector3(1f, 0, 0);
         specular = new Vector3(1, 1, 1);
-        MeshDataList.Add(new MeshData(LeftCube.GetComponent<MeshFilter>().sharedMesh, LeftCube.transform, albedo, emission, specular));
+        MeshDataList.Add(new MeshData(RedCube.GetComponent<MeshFilter>().sharedMesh, RedCube.transform, albedo, emission, specular));
 
-        GameObject RightCube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        RightCube.transform.localScale = new Vector3(20, 2, 20);
-        RightCube.transform.position = new Vector3(11f, 40f, 0f);
-        RightCube.transform.localEulerAngles = new Vector3(0, 0, 90);
-        albedo = new Vector3(0, 0, 0);
-        emission = new Vector3(0, 0, 1f);
-        specular = new Vector3(1, 1, 1);
-        MeshDataList.Add(new MeshData(RightCube.GetComponent<MeshFilter>().sharedMesh, RightCube.transform, albedo, emission, specular));
+        //GameObject BlueSphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        //BlueSphere.transform.localScale = new Vector3(8, 8, 8);
+        //BlueSphere.transform.position = new Vector3(0, 49f, 0);
+        //albedo = new Vector3(0, 0, 0);
+        //emission = new Vector3(0, 0, 1);
+        //specular = new Vector3(1, 1, 1);
+        //MeshDataList.Add(new MeshData(BlueSphere.GetComponent<MeshFilter>().sharedMesh, BlueSphere.transform, albedo, emission, specular));
+
         
         RebuildMeshObjects = true;
     }
