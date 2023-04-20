@@ -125,6 +125,12 @@ float4 Combine(float distA, float distB, float3 colorA, float3 colorB)
     return float4(color, dist);
 }
 
+float LimitedDomainRepetition(in float3 pos, in float3 spacing, in Mesh mesh)
+{
+    float3 q = pos - spacing * clamp(round(pos / spacing), -1, 1);
+    return GetMeshSDF(mesh, q);
+}
+
 float4 SampleScene(float3 pos)
 {
     float GlobalDist = MaxDist;
@@ -133,9 +139,10 @@ float4 SampleScene(float3 pos)
     for (int x = 0; x < MeshCount; x++)
     {
         Mesh mesh = Meshes[x];
-        float MeshDist = GetMeshSDF(mesh, pos);
+        float MeshDist = LimitedDomainRepetition(pos, float3(5, 5, 0), mesh);
+        float3 MeshColor = mesh.color;
 
-        float4 GlobalCombined = Combine(GlobalDist, MeshDist, GlobalColor, mesh.color);
+        float4 GlobalCombined = Combine(GlobalDist, MeshDist, GlobalColor, MeshColor);
         GlobalColor = GlobalCombined.xyz;
         GlobalDist = GlobalCombined.w;
     }

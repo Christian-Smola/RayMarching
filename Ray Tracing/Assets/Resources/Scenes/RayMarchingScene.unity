@@ -202,7 +202,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 222539168}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalPosition: {x: 0, y: 1, z: -25}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -234,7 +234,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   CompShader: {fileID: 7200000, guid: d8ea1fda879bd8043bec64caa9e22a23, type: 3}
   DirectionalLight: {fileID: 2019146337}
-  SkyboxTexture: {fileID: 2800000, guid: 837e2055841d7fe41bb5f4d253f284fc, type: 3}
+  SkyboxTexture: {fileID: 2800000, guid: 18ec2d52be8f4524a97c25a2ed27838e, type: 3}
 --- !u!1 &2019146336
 GameObject:
   m_ObjectHideFlags: 0
