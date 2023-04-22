@@ -5,7 +5,7 @@ m_ProjectFiles:
     m_ContentTrackingEnabled: 1
     m_ModificationDate:
       serializedVersion: 2
-      ticks: 638176170841876806
+      ticks: 638177353120865686
     m_Hash: 3557091318
   m_LockFileStatus:
     m_FilePath: C:/Users/csmol/Documents/Git Projects/RayTracing/Ray Tracing/Packages/packages-lock.json
@@ -13,7 +13,7 @@ m_ProjectFiles:
     m_ContentTrackingEnabled: 1
     m_ModificationDate:
       serializedVersion: 2
-      ticks: 638176170841886810
+      ticks: 638177353120865686
     m_Hash: 1844972895
 m_EmbeddedPackageManifests:
   m_ManifestsStatus: {}
@@ -107,6 +107,7 @@ m_ResolvedPackages:
     - 2.0.0
     - 2.0.1
     - 2.0.3
+    - 2.0.4
     - 2.1.0-preview.3
     - 2.1.0-preview.5
     - 2.1.0-preview.6
@@ -147,6 +148,7 @@ m_ResolvedPackages:
     - 2.0.0
     - 2.0.1
     - 2.0.3
+    - 2.0.4
     - 2.1.0-preview.3
     - 2.1.0-preview.5
     - 2.1.0-preview.6
@@ -257,6 +259,7 @@ m_ResolvedPackages:
     - 3.0.17
     - 3.0.18
     - 3.0.20
+    - 3.0.21
     compatible:
     - 3.0.7
     - 3.0.9
@@ -269,7 +272,8 @@ m_ResolvedPackages:
     - 3.0.17
     - 3.0.18
     - 3.0.20
-    verified: 3.0.20
+    - 3.0.21
+    verified: 3.0.21
   dependencies:
   - name: com.unity.ext.nunit
     version: 1.0.6

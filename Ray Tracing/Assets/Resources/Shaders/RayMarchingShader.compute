@@ -73,6 +73,18 @@ float CubeSDF(float3 CameraPos, float3 Center, float3 Size)
     return UnsignedDistance + DistanceInsideBox;
 }
 
+float TorusSDF(float3 pos, float2 t)
+{
+    float2 q = float2(length(pos.xz) - t.x, pos.y);
+    return length(q) - t.y;
+}
+
+float4 opElongate(in float3 p, in float3 h)
+{
+    float3 q = abs(p) - h;
+    return float4(max(q, 0), min(max(q.x, max(q.y, q.z)), 0));
+}
+
 float GetMeshSDF(Mesh mesh, float3 pos)
 {
     if (mesh.shape == 0)
@@ -81,6 +93,12 @@ float GetMeshSDF(Mesh mesh, float3 pos)
         return CubeSDF(pos, mesh.position, mesh.size);
     if (mesh.shape == 2)
         return PlaneSDF(pos, float3(0, 1, 0), 1.5f);
+    if (mesh.shape == 3)
+    {
+        float3 q = pos - mesh.position;
+        float4 w = opElongate(q, float3(0, -mesh.size.y + 0.2f, 0));
+        return w.w + TorusSDF(w.xyz, mesh.size.xy);
+    }
 
     return MaxDist;
 }
@@ -89,7 +107,7 @@ float4 Combine(float distA, float distB, float3 colorA, float3 colorB)
 {
     float dist = distA;
     float3 color = colorA;
-    float blendValue = 0.3f;
+    float blendValue = 6.5f;
 
     if (_Operation == 0)
     {
@@ -139,7 +157,8 @@ float4 SampleScene(float3 pos)
     for (int x = 0; x < MeshCount; x++)
     {
         Mesh mesh = Meshes[x];
-        float MeshDist = LimitedDomainRepetition(pos, float3(5, 5, 0), mesh);
+        float MeshDist = GetMeshSDF(mesh, pos);
+        //float MeshDist = LimitedDomainRepetition(pos, float3(5, 5, 0), mesh);
         float3 MeshColor = mesh.color;
 
         float4 GlobalCombined = Combine(GlobalDist, MeshDist, GlobalColor, MeshColor);
