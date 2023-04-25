@@ -5,6 +5,7 @@ public class RayMarching : MonoBehaviour
 {
     public ComputeShader CompShader;
     public Light DirectionalLight;
+    public Texture PlanetTexture;
     public Texture SkyboxTexture;
 
     private Camera cam;
@@ -57,6 +58,7 @@ public class RayMarching : MonoBehaviour
 
         CompShader.SetMatrix("_CameraToWorld", cam.cameraToWorldMatrix);
         CompShader.SetMatrix("_CameraInverseProjection", cam.projectionMatrix.inverse);
+        CompShader.SetTexture(0, "_PlanetTexture", PlanetTexture);
         CompShader.SetTexture(0, "_SkyboxTexture", SkyboxTexture);
         CompShader.SetBuffer(0, "Meshes", MeshBuffer);
         CompShader.SetInt("MeshCount", MeshList.Count);

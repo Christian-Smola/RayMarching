@@ -8,6 +8,9 @@ float4x4 _CameraToWorld;
 float4x4 _CameraInverseProjection;
 int _Operation;
 
+Texture2D<float4> _PlanetTexture;
+SamplerState sampler_PlanetTexture;
+
 Texture2D<float4> _SkyboxTexture;
 SamplerState sampler_SkyboxTexture;
 
@@ -246,6 +249,15 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
             float distToLight = MaxDist;
             float Shadows = CalculateHardShadows(ray, distToLight);
+
+            //Textures
+            float3 XY = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
+            float3 XZ = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
+            float3 YZ = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.yz * 0.5f + 0.5f, 0).xyz;
+
+            normals = abs(normals);
+
+            col = (XY * normals.z) + (XZ * normals.y) + (YZ * normals.x);
 
             Result[id.xy] = float4(col * Lighting * Shadows, 1);
 
