@@ -235,6 +235,9 @@ MonoBehaviour:
   CompShader: {fileID: 7200000, guid: d8ea1fda879bd8043bec64caa9e22a23, type: 3}
   DirectionalLight: {fileID: 2019146337}
   PlanetTexture: {fileID: 2800000, guid: 6b8e49ede125616429bba15fa5b3be90, type: 3}
+  PlanetNormalTexture: {fileID: 2800000, guid: 4d24cd9fb8f093c40b21839f482d60ef, type: 3}
+  PlanetaryRingTexture: {fileID: 2800000, guid: 249f7d65829c7d141b14b68051fdcbb3, type: 3}
+  PlanetaryRingNormalTexture: {fileID: 2800000, guid: c1b0f5d288f5ee0439887c01d2d370e7, type: 3}
   SkyboxTexture: {fileID: 2800000, guid: 18ec2d52be8f4524a97c25a2ed27838e, type: 3}
 --- !u!1 &2019146336
 GameObject:

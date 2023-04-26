@@ -11,6 +11,15 @@ int _Operation;
 Texture2D<float4> _PlanetTexture;
 SamplerState sampler_PlanetTexture;
 
+Texture2D<float4> _PlanetNormalTexture;
+SamplerState sampler_PlanetNormalTexture;
+
+Texture2D<float4> _PlanetaryRingTexture;
+SamplerState sampler_PlanetaryRingTexture;
+
+Texture2D<float4> _PlanetaryRingNormalTexture;
+SamplerState sampler_PlanetaryRingNormalTexture;
+
 Texture2D<float4> _SkyboxTexture;
 SamplerState sampler_SkyboxTexture;
 
@@ -28,7 +37,7 @@ struct Mesh
 {
     float3 position;
     float3 size;
-    float3 color;
+    int meshID;
     int shape;
 };
 
@@ -152,7 +161,38 @@ float LimitedDomainRepetition(in float3 pos, in float3 spacing, in Mesh mesh)
     return GetMeshSDF(mesh, q);
 }
 
-float4 SampleScene(float3 pos)
+float DistToScene(float3 pos)
+{
+    float GlobalDist = MaxDist;
+
+    for (int x = 0; x < MeshCount; x++)
+    {
+        Mesh mesh = Meshes[x];
+        float MeshDist = GetMeshSDF(mesh, pos);
+
+        if (MeshDist < GlobalDist)
+            GlobalDist = MeshDist;
+    }
+
+    return GlobalDist;
+}
+
+float3 CalculateNormals(float3 pos)
+{
+    float3 V1 = float3(
+        DistToScene(pos + float3(Epsilon, 0, 0)),
+        DistToScene(pos + float3(0, Epsilon, 0)),
+        DistToScene(pos + float3(0, 0, Epsilon)));
+
+    float3 V2 = float3(
+        DistToScene(pos - float3(Epsilon, 0, 0)),
+        DistToScene(pos - float3(0, Epsilon, 0)),
+        DistToScene(pos - float3(0, 0, Epsilon)));
+
+    return normalize(V1 - V2);
+}
+
+float3 CalculateTextures(float3 pos, float3 dir)
 {
     float GlobalDist = MaxDist;
     float3 GlobalColor = 0;
@@ -161,30 +201,59 @@ float4 SampleScene(float3 pos)
     {
         Mesh mesh = Meshes[x];
         float MeshDist = GetMeshSDF(mesh, pos);
-        //float MeshDist = LimitedDomainRepetition(pos, float3(5, 5, 0), mesh);
-        float3 MeshColor = mesh.color;
 
-        float4 GlobalCombined = Combine(GlobalDist, MeshDist, GlobalColor, MeshColor);
-        GlobalColor = GlobalCombined.xyz;
-        GlobalDist = GlobalCombined.w;
+        if (MeshDist < GlobalDist)
+        {
+            float3 HitPoint = pos + dir * MeshDist;
+            float3 normals = CalculateNormals(HitPoint - dir * Epsilon);
+
+            if (mesh.meshID == 1)
+            {
+                float3 XY = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
+                float3 XZ = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
+                float3 YZ = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.yz * 0.5f + 0.5f, 0).xyz;
+
+                normals = abs(normals);
+
+                float3 col = (XY * normals.z) + (XZ * normals.y) + (YZ * normals.x);
+
+                XY = _PlanetNormalTexture.SampleLevel(sampler_PlanetNormalTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
+                XZ = _PlanetNormalTexture.SampleLevel(sampler_PlanetNormalTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
+                YZ = _PlanetNormalTexture.SampleLevel(sampler_PlanetNormalTexture, HitPoint.yz * 0.5f + 0.5f, 0).xyz;
+
+                normals = (XY * normals.z) + (XZ * normals.y) + (YZ * normals.x);
+                normals = saturate(dot(normals, _DirectionalLight.xyz));
+
+                GlobalColor = col * normals;
+            }
+            else if (mesh.meshID == 2)
+            {
+                float3 XY = _PlanetaryRingTexture.SampleLevel(sampler_PlanetaryRingTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
+                float3 XZ = _PlanetaryRingTexture.SampleLevel(sampler_PlanetaryRingTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
+                float3 YZ = _PlanetaryRingTexture.SampleLevel(sampler_PlanetaryRingTexture, HitPoint.yz * 0.5f + 0.5f, 0).xyz;
+
+                normals = abs(normals);
+
+                float3 col = (XY * normals.z) + (XZ * normals.y) + (YZ * normals.x);
+
+                XY = _PlanetaryRingNormalTexture.SampleLevel(sampler_PlanetaryRingNormalTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
+                XZ = _PlanetaryRingNormalTexture.SampleLevel(sampler_PlanetaryRingNormalTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
+                YZ = _PlanetaryRingNormalTexture.SampleLevel(sampler_PlanetaryRingNormalTexture, HitPoint.yz * 0.5f + 0.5f, 0).xyz;
+
+                normals = (XY * normals.z) + (XZ * normals.y) + (YZ * normals.x);
+                normals = saturate(dot(normals, _DirectionalLight.xyz));
+
+                GlobalColor = col * normals;
+            }
+
+            GlobalDist = MeshDist;
+        }
+        else {
+            GlobalColor = GlobalColor;
+        }
     }
 
-    return float4(GlobalColor, GlobalDist);
-}
-
-float3 CalculateNormals(float3 pos)
-{
-    float3 V1 = float3(
-        SampleScene(pos + float3(Epsilon, 0, 0)).w,
-        SampleScene(pos + float3(0, Epsilon, 0)).w,
-        SampleScene(pos + float3(0, 0, Epsilon)).w);
-
-    float3 V2 = float3(
-        SampleScene(pos - float3(Epsilon, 0, 0)).w,
-        SampleScene(pos - float3(0, Epsilon, 0)).w,
-        SampleScene(pos - float3(0, 0, Epsilon)).w);
-
-    return normalize(V1 - V2);
+    return GlobalColor;
 }
 
 float CalculateHardShadows(Ray ray, float DistToShadePoint)
@@ -197,8 +266,7 @@ float CalculateHardShadows(Ray ray, float DistToShadePoint)
     while (rayDist < DistToShadePoint)
     {
         marchSteps++;
-        float4 sampleResult = SampleScene(ray.origin);
-        float dist = sampleResult.w;
+        float dist = DistToScene(ray.origin);
 
         if (dist <= Epsilon)
             return shadowIntensity;
@@ -228,13 +296,10 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     {
         MarchSteps++;
 
-        float4 SampleResult = SampleScene(ray.origin);
-        float dist = SampleResult.w;
+        float dist = DistToScene(ray.origin);
 
         if (dist <= Epsilon)
         {
-            float3 col = SampleResult.xyz;
-
             //Lighting
             float3 HitPoint = ray.origin + ray.direction * dist;
             float3 normals = CalculateNormals(HitPoint - ray.direction * Epsilon);
@@ -251,15 +316,9 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             float Shadows = CalculateHardShadows(ray, distToLight);
 
             //Textures
-            float3 XY = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
-            float3 XZ = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
-            float3 YZ = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.yz * 0.5f + 0.5f, 0).xyz;
+            float3 Textures = CalculateTextures(ray.origin, ray.direction);
 
-            normals = abs(normals);
-
-            col = (XY * normals.z) + (XZ * normals.y) + (YZ * normals.x);
-
-            Result[id.xy] = float4(col * Lighting * Shadows, 1);
+            Result[id.xy] = float4(Textures * Lighting * Shadows, 1);
 
             break;
         }

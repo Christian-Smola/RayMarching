@@ -6,6 +6,9 @@ public class RayMarching : MonoBehaviour
     public ComputeShader CompShader;
     public Light DirectionalLight;
     public Texture PlanetTexture;
+    public Texture PlanetNormalTexture;
+    public Texture PlanetaryRingTexture;
+    public Texture PlanetaryRingNormalTexture;
     public Texture SkyboxTexture;
 
     private Camera cam;
@@ -19,7 +22,7 @@ public class RayMarching : MonoBehaviour
     {
         public Vector3 Position;
         public Vector3 Size;
-        public Vector3 Color;
+        public int MeshID;
         public int Shape;
     }
 
@@ -59,6 +62,9 @@ public class RayMarching : MonoBehaviour
         CompShader.SetMatrix("_CameraToWorld", cam.cameraToWorldMatrix);
         CompShader.SetMatrix("_CameraInverseProjection", cam.projectionMatrix.inverse);
         CompShader.SetTexture(0, "_PlanetTexture", PlanetTexture);
+        CompShader.SetTexture(0, "_PlanetNormalTexture", PlanetNormalTexture);
+        CompShader.SetTexture(0, "_PlanetaryRingTexture", PlanetaryRingTexture);
+        CompShader.SetTexture(0, "_PlanetaryRingNormalTexture", PlanetaryRingNormalTexture);
         CompShader.SetTexture(0, "_SkyboxTexture", SkyboxTexture);
         CompShader.SetBuffer(0, "Meshes", MeshBuffer);
         CompShader.SetInt("MeshCount", MeshList.Count);
@@ -94,10 +100,10 @@ public class RayMarching : MonoBehaviour
     private void SetupScene()
     {
         //Red Planet
-        MeshList.Add(new Mesh() { Position = new Vector3(0, 0, 3), Size = new Vector3(3, 3, 3), Color = new Vector3(1, 0, 0), Shape = 0 });
+        MeshList.Add(new Mesh() { Position = new Vector3(0, 0, 3), Size = new Vector3(3, 3, 3), MeshID = 1, Shape = 0 });
 
         //Orange Planetary Ring
-        MeshList.Add(new Mesh() { Position = new Vector3(0, 0, 3), Size = new Vector3(8.0f, 2.5f, 8.0f), Color = new Vector3(1, 0.4f, 0), Shape = 3 });
+        MeshList.Add(new Mesh() { Position = new Vector3(0, 0, 3), Size = new Vector3(8.0f, 2.5f, 8.0f), MeshID = 2, Shape = 3 });
 
         //Blue Cube
         //MeshList.Add(new Mesh() { Position = new Vector3(0.0f, 0.0f, 3f), Size = new Vector3(2, 1, 2), Color = new Vector3(0, 0, 1), Shape = 1 });
@@ -105,7 +111,7 @@ public class RayMarching : MonoBehaviour
         //Grey Quad (Floor)
         //MeshList.Add(new Mesh() { Position = new Vector3(0, -0.5f, 3), Size = new Vector3(5, 5, 1), Color = new Vector3(0.5f, 0.5f, 0.5f), Shape = 2 });
 
-        ComputeBuffer buffer = new ComputeBuffer(MeshList.Count, 40);
+        ComputeBuffer buffer = new ComputeBuffer(MeshList.Count, 32);
         buffer.SetData(MeshList);
 
         MeshBuffer = buffer;
