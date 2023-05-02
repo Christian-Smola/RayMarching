@@ -6,8 +6,10 @@ public class RayMarching : MonoBehaviour
     public ComputeShader CompShader;
     public Light DirectionalLight;
     public Texture PlanetTexture;
+    public Texture PlanetHeightTexture;
     public Texture PlanetNormalTexture;
     public Texture PlanetaryRingTexture;
+    public Texture PlanetaryRingHeightTexture;
     public Texture PlanetaryRingNormalTexture;
     public Texture SkyboxTexture;
 
@@ -59,11 +61,14 @@ public class RayMarching : MonoBehaviour
     {
         Vector3 forward = DirectionalLight.transform.forward;
 
+        CompShader.SetVector("_Time", Shader.GetGlobalVector("_Time"));
         CompShader.SetMatrix("_CameraToWorld", cam.cameraToWorldMatrix);
         CompShader.SetMatrix("_CameraInverseProjection", cam.projectionMatrix.inverse);
         CompShader.SetTexture(0, "_PlanetTexture", PlanetTexture);
+        CompShader.SetTexture(0, "_PlanetHeightTexture", PlanetHeightTexture);
         CompShader.SetTexture(0, "_PlanetNormalTexture", PlanetNormalTexture);
         CompShader.SetTexture(0, "_PlanetaryRingTexture", PlanetaryRingTexture);
+        CompShader.SetTexture(0, "_PlanetaryRingHeightTexture", PlanetaryRingHeightTexture);
         CompShader.SetTexture(0, "_PlanetaryRingNormalTexture", PlanetaryRingNormalTexture);
         CompShader.SetTexture(0, "_SkyboxTexture", SkyboxTexture);
         CompShader.SetBuffer(0, "Meshes", MeshBuffer);

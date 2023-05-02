@@ -7,15 +7,22 @@ float4 _DirectionalLight;
 float4x4 _CameraToWorld;
 float4x4 _CameraInverseProjection;
 int _Operation;
+float _Time;
 
 Texture2D<float4> _PlanetTexture;
 SamplerState sampler_PlanetTexture;
+
+Texture2D<float4> _PlanetHeightTexture;
+SamplerState sampler_PlanetHeightTexture;
 
 Texture2D<float4> _PlanetNormalTexture;
 SamplerState sampler_PlanetNormalTexture;
 
 Texture2D<float4> _PlanetaryRingTexture;
 SamplerState sampler_PlanetaryRingTexture;
+
+Texture2D<float4> _PlanetaryRingHeightTexture;
+SamplerState sampler_PlanetaryRingHeightTexture;
 
 Texture2D<float4> _PlanetaryRingNormalTexture;
 SamplerState sampler_PlanetaryRingNormalTexture;
@@ -60,6 +67,13 @@ Ray CreateCameraRay(float2 uv)
     direction = normalize(direction);
 
     return CreateRay(origin, direction);
+}
+
+float2x2 Rotate(float a)
+{
+    float s = sin(a);
+    float c = cos(a);
+    return float2x2(c, -s, s, c);
 }
 
 float mix(float x, float y, float a)
@@ -192,20 +206,57 @@ float3 CalculateNormals(float3 pos)
     return normalize(V1 - V2);
 }
 
-float3 CalculateTextures(float3 pos, float3 dir)
+float4 CreateTextures(Ray ray)
 {
     float GlobalDist = MaxDist;
     float3 GlobalColor = 0;
 
+    float3 XY = 0;
+    float3 XZ = 0;
+    float3 YZ = 0;
+
+    ray.origin.xz = mul(Rotate(_Time * 2.0f), ray.origin.xz);
+    ray.origin.xy = mul(Rotate(-0.15f), ray.origin.xy);
+
     for (int x = 0; x < MeshCount; x++)
     {
         Mesh mesh = Meshes[x];
-        float MeshDist = GetMeshSDF(mesh, pos);
+        float MeshDist = GetMeshSDF(mesh, ray.origin);
+
+        float3 HitPoint = ray.origin + ray.direction * MeshDist;
+        float3 normals = CalculateNormals(HitPoint - ray.direction * Epsilon);
+
+        if (mesh.meshID == 1)
+        {
+            XY = _PlanetHeightTexture.SampleLevel(sampler_PlanetHeightTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
+            XZ = _PlanetHeightTexture.SampleLevel(sampler_PlanetHeightTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
+            YZ = _PlanetHeightTexture.SampleLevel(sampler_PlanetHeightTexture, HitPoint.yz * 0.5f + 0.5f, 0).xyz;
+
+            normals = abs(normals);
+
+            float3 DisplacementTexture = (XY * normals.z) + (XZ * normals.y) + (YZ * normals.x);
+
+            MeshDist -= DisplacementTexture.z * 0.12f;
+        }
+        else if (mesh.meshID == 2)
+        {
+            XY = _PlanetaryRingHeightTexture.SampleLevel(sampler_PlanetaryRingHeightTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
+            XZ = _PlanetaryRingHeightTexture.SampleLevel(sampler_PlanetaryRingHeightTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
+            YZ = _PlanetaryRingHeightTexture.SampleLevel(sampler_PlanetaryRingHeightTexture, HitPoint.yz * 0.5f + 0.5f, 0).xyz;
+
+            normals = abs(normals);
+
+            float3 DisplacementTexture = (XY * normals.z) + (XZ * normals.y) + (YZ * normals.x);
+
+            //Add smoothstep here
+
+            MeshDist -= DisplacementTexture.z * 0.08f;
+        }
 
         if (MeshDist < GlobalDist)
         {
-            float3 HitPoint = pos + dir * MeshDist;
-            float3 normals = CalculateNormals(HitPoint - dir * Epsilon);
+            HitPoint = ray.origin + ray.direction * MeshDist;
+            normals = CalculateNormals(HitPoint - ray.direction * Epsilon);
 
             if (mesh.meshID == 1)
             {
@@ -248,12 +299,9 @@ float3 CalculateTextures(float3 pos, float3 dir)
 
             GlobalDist = MeshDist;
         }
-        else {
-            GlobalColor = GlobalColor;
-        }
     }
 
-    return GlobalColor;
+    return float4(GlobalColor, GlobalDist);
 }
 
 float CalculateHardShadows(Ray ray, float DistToShadePoint)
@@ -298,8 +346,16 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
         float dist = DistToScene(ray.origin);
 
+        float4 Output = CreateTextures(ray);
+
+        float3 Textures = Output.xyz;
+        dist = Output.w;
+
         if (dist <= Epsilon)
         {
+            ray.origin.xz = mul(Rotate(_Time * 2.0f), ray.origin.xz);
+            ray.origin.xy = mul(Rotate(-0.15f), ray.origin.xy);
+
             //Lighting
             float3 HitPoint = ray.origin + ray.direction * dist;
             float3 normals = CalculateNormals(HitPoint - ray.direction * Epsilon);
@@ -314,9 +370,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
             float distToLight = MaxDist;
             float Shadows = CalculateHardShadows(ray, distToLight);
-
-            //Textures
-            float3 Textures = CalculateTextures(ray.origin, ray.direction);
 
             Result[id.xy] = float4(Textures * Lighting * Shadows, 1);
 

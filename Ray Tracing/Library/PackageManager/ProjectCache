@@ -5,7 +5,7 @@ m_ProjectFiles:
     m_ContentTrackingEnabled: 1
     m_ModificationDate:
       serializedVersion: 2
-      ticks: 638181266244418980
+      ticks: 638185947295253466
     m_Hash: 3557091318
   m_LockFileStatus:
     m_FilePath: C:/Users/csmol/Documents/Git Projects/RayTracing/Ray Tracing/Packages/packages-lock.json
@@ -13,7 +13,7 @@ m_ProjectFiles:
     m_ContentTrackingEnabled: 1
     m_ModificationDate:
       serializedVersion: 2
-      ticks: 638181266244418980
+      ticks: 638185947295253466
     m_Hash: 1844972895
 m_EmbeddedPackageManifests:
   m_ManifestsStatus: {}
@@ -835,6 +835,7 @@ m_ResolvedPackages:
     - 1.6.2
     - 1.6.3
     - 1.6.4
+    - 1.6.5
     - 1.7.0-pre.1
     - 1.7.0-pre.2
     - 1.7.0
@@ -855,6 +856,7 @@ m_ResolvedPackages:
     - 1.6.2
     - 1.6.3
     - 1.6.4
+    - 1.6.5
     - 1.7.0-pre.1
     - 1.7.0-pre.2
     - 1.7.0
