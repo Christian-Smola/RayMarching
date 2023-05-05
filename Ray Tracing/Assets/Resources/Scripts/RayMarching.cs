@@ -22,10 +22,10 @@ public class RayMarching : MonoBehaviour
 
     public struct Mesh
     {
-        public Vector3 Position;
-        public Vector3 Size;
         public int MeshID;
         public int Shape;
+        public Vector3 Size;
+        public Vector3 Position;
     }
 
     private void Awake()
@@ -105,16 +105,13 @@ public class RayMarching : MonoBehaviour
     private void SetupScene()
     {
         //Red Planet
-        MeshList.Add(new Mesh() { Position = new Vector3(0, 0, 3), Size = new Vector3(3, 3, 3), MeshID = 1, Shape = 0 });
+        MeshList.Add(new Mesh() { MeshID = 1, Shape = 0, Size = new Vector3(3, 3, 3), Position = new Vector3(0, 0, 3) });
 
         //Orange Planetary Ring
-        MeshList.Add(new Mesh() { Position = new Vector3(0, 0, 3), Size = new Vector3(8.0f, 2.5f, 8.0f), MeshID = 2, Shape = 3 });
+        MeshList.Add(new Mesh() { MeshID = 2, Shape = 3, Size = new Vector3(8.0f, 2.5f, 8.0f), Position = new Vector3(0, 0, 3) });
 
-        //Blue Cube
-        //MeshList.Add(new Mesh() { Position = new Vector3(0.0f, 0.0f, 3f), Size = new Vector3(2, 1, 2), Color = new Vector3(0, 0, 1), Shape = 1 });
-
-        //Grey Quad (Floor)
-        //MeshList.Add(new Mesh() { Position = new Vector3(0, -0.5f, 3), Size = new Vector3(5, 5, 1), Color = new Vector3(0.5f, 0.5f, 0.5f), Shape = 2 });
+        //Moon
+        MeshList.Add(new Mesh() { MeshID = 3, Shape = 0, Size = new Vector3(1, 1, 1), Position = new Vector3(0, 0, 3) });
 
         ComputeBuffer buffer = new ComputeBuffer(MeshList.Count, 32);
         buffer.SetData(MeshList);

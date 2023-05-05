@@ -42,10 +42,10 @@ struct Ray
 
 struct Mesh
 {
-    float3 position;
-    float3 size;
     int meshID;
     int shape;
+    float3 size;
+    float3 position;
 };
 
 StructuredBuffer<Mesh> Meshes;
@@ -206,6 +206,23 @@ float3 CalculateNormals(float3 pos)
     return normalize(V1 - V2);
 }
 
+float3 Transformations(float3 origin, int ID)
+{
+    if (ID == 3)
+    {
+        origin.xy = mul(Rotate(-0.25f), origin.xy);
+        origin.xz = mul(Rotate(_Time * 15.0f), origin.xz);
+        origin -= float3(15, 0, 0);
+    }
+    else
+    {
+        origin.xy = mul(Rotate(-0.25f), origin.xy);
+        origin.xz = mul(Rotate(_Time * 4.0f), origin.xz);
+    }
+
+    return origin;
+}
+
 float4 CreateTextures(Ray ray)
 {
     float GlobalDist = MaxDist;
@@ -215,16 +232,18 @@ float4 CreateTextures(Ray ray)
     float3 XZ = 0;
     float3 YZ = 0;
 
-    ray.origin.xz = mul(Rotate(_Time * 2.0f), ray.origin.xz);
-    ray.origin.xy = mul(Rotate(-0.15f), ray.origin.xy);
-
     for (int x = 0; x < MeshCount; x++)
     {
-        Mesh mesh = Meshes[x];
-        float MeshDist = GetMeshSDF(mesh, ray.origin);
+        Ray NewRay = ray;
 
-        float3 HitPoint = ray.origin + ray.direction * MeshDist;
-        float3 normals = CalculateNormals(HitPoint - ray.direction * Epsilon);
+        Mesh mesh = Meshes[x];
+
+        NewRay.origin = Transformations(NewRay.origin, mesh.meshID);
+
+        float MeshDist = GetMeshSDF(mesh, NewRay.origin);
+
+        float3 HitPoint = NewRay.origin + NewRay.direction * MeshDist;
+        float3 normals = CalculateNormals(HitPoint - NewRay.direction * Epsilon);
 
         if (mesh.meshID == 1)
         {
@@ -238,7 +257,7 @@ float4 CreateTextures(Ray ray)
 
             MeshDist -= DisplacementTexture.z * 0.12f;
         }
-        else if (mesh.meshID == 2)
+        else if (mesh.meshID > 1)
         {
             XY = _PlanetaryRingHeightTexture.SampleLevel(sampler_PlanetaryRingHeightTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
             XZ = _PlanetaryRingHeightTexture.SampleLevel(sampler_PlanetaryRingHeightTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
@@ -255,8 +274,8 @@ float4 CreateTextures(Ray ray)
 
         if (MeshDist < GlobalDist)
         {
-            HitPoint = ray.origin + ray.direction * MeshDist;
-            normals = CalculateNormals(HitPoint - ray.direction * Epsilon);
+            HitPoint = NewRay.origin + NewRay.direction * MeshDist;
+            normals = CalculateNormals(HitPoint - NewRay.direction * Epsilon);
 
             if (mesh.meshID == 1)
             {
@@ -277,7 +296,7 @@ float4 CreateTextures(Ray ray)
 
                 GlobalColor = col * normals;
             }
-            else if (mesh.meshID == 2)
+            else if (mesh.meshID > 1)
             {
                 float3 XY = _PlanetaryRingTexture.SampleLevel(sampler_PlanetaryRingTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
                 float3 XZ = _PlanetaryRingTexture.SampleLevel(sampler_PlanetaryRingTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
@@ -371,7 +390,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             float distToLight = MaxDist;
             float Shadows = CalculateHardShadows(ray, distToLight);
 
-            Result[id.xy] = float4(Textures * Lighting * Shadows, 1);
+            Result[id.xy] = float4(Textures /** Lighting * Shadows*/, 1);
 
             break;
         }
