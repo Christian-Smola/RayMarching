@@ -9,6 +9,9 @@ float4x4 _CameraInverseProjection;
 int _Operation;
 float _Time;
 
+Texture2D<float4> _StarTexture;
+SamplerState sampler_StarTexture;
+
 Texture2D<float4> _PlanetTexture;
 SamplerState sampler_PlanetTexture;
 
@@ -206,18 +209,27 @@ float3 CalculateNormals(float3 pos)
     return normalize(V1 - V2);
 }
 
-float3 Transformations(float3 origin, int ID)
+float3 Transformations(float3 origin, Mesh mesh)
 {
-    if (ID == 3)
+    if (mesh.meshID > 0)
     {
-        origin.xy = mul(Rotate(-0.25f), origin.xy);
-        origin.xz = mul(Rotate(_Time * 15.0f), origin.xz);
-        origin -= float3(15, 0, 0);
+        //Rotate around the star
+        origin.xz = mul(Rotate(_Time * 6), origin.xz - mesh.position.xz) + mesh.position.xz;
+        origin -= float3(25, 0, 0);
+
+        //Axial tilt
+        //origin.xy = mul(Rotate(-0.25f), origin.xy - mesh.position.xy) + mesh.position.xy;
     }
-    else
+
+    if (mesh.meshID == 3)
     {
-        origin.xy = mul(Rotate(-0.25f), origin.xy);
-        origin.xz = mul(Rotate(_Time * 4.0f), origin.xz);
+        origin.xz = mul(Rotate(_Time * 15), origin.xz - mesh.position.xz) + mesh.position.xz;
+        origin -= float3(12, 0, 0);
+        origin.xz = mul(Rotate(_Time * 8), origin.xz - mesh.position.xz) + mesh.position.xz;
+    }
+    else if (mesh.meshID == 1 || mesh.meshID == 2)
+    {
+        origin.xz = mul(Rotate(_Time * 5), origin.xz - mesh.position.xz) + mesh.position.xz;
     }
 
     return origin;
@@ -238,7 +250,7 @@ float4 CreateTextures(Ray ray)
 
         Mesh mesh = Meshes[x];
 
-        NewRay.origin = Transformations(NewRay.origin, mesh.meshID);
+        NewRay.origin = Transformations(NewRay.origin, mesh);
 
         float MeshDist = GetMeshSDF(mesh, NewRay.origin);
 
@@ -277,11 +289,21 @@ float4 CreateTextures(Ray ray)
             HitPoint = NewRay.origin + NewRay.direction * MeshDist;
             normals = CalculateNormals(HitPoint - NewRay.direction * Epsilon);
 
-            if (mesh.meshID == 1)
+            if (mesh.meshID == 0)
             {
-                float3 XY = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
-                float3 XZ = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
-                float3 YZ = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.yz * 0.5f + 0.5f, 0).xyz;
+                XY = _StarTexture.SampleLevel(sampler_StarTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
+                XZ = _StarTexture.SampleLevel(sampler_StarTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
+                YZ = _StarTexture.SampleLevel(sampler_StarTexture, HitPoint.yz * 0.5f + 0.5f, 0).xyz;
+
+                float3 col = (XY * normals.z) + (XZ * normals.y) + (YZ * normals.x);
+
+                GlobalColor = col * float3(1, 1, 0);
+            }
+            else if (mesh.meshID == 1)
+            {
+                XY = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
+                XZ = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
+                YZ = _PlanetTexture.SampleLevel(sampler_PlanetTexture, HitPoint.yz * 0.5f + 0.5f, 0).xyz;
 
                 normals = abs(normals);
 
@@ -298,9 +320,9 @@ float4 CreateTextures(Ray ray)
             }
             else if (mesh.meshID > 1)
             {
-                float3 XY = _PlanetaryRingTexture.SampleLevel(sampler_PlanetaryRingTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
-                float3 XZ = _PlanetaryRingTexture.SampleLevel(sampler_PlanetaryRingTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
-                float3 YZ = _PlanetaryRingTexture.SampleLevel(sampler_PlanetaryRingTexture, HitPoint.yz * 0.5f + 0.5f, 0).xyz;
+                XY = _PlanetaryRingTexture.SampleLevel(sampler_PlanetaryRingTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
+                XZ = _PlanetaryRingTexture.SampleLevel(sampler_PlanetaryRingTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
+                YZ = _PlanetaryRingTexture.SampleLevel(sampler_PlanetaryRingTexture, HitPoint.yz * 0.5f + 0.5f, 0).xyz;
 
                 normals = abs(normals);
 
@@ -372,9 +394,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
         if (dist <= Epsilon)
         {
-            ray.origin.xz = mul(Rotate(_Time * 2.0f), ray.origin.xz);
-            ray.origin.xy = mul(Rotate(-0.15f), ray.origin.xy);
-
             //Lighting
             float3 HitPoint = ray.origin + ray.direction * dist;
             float3 normals = CalculateNormals(HitPoint - ray.direction * Epsilon);
