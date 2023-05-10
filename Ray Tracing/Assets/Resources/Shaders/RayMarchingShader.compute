@@ -1,6 +1,7 @@
 //Based on the following article by Inigo Quilez
 //https://iquilezles.org/articles/distfunctions/
 #pragma kernel CSMain
+#include "/Includes/Noise.hlsl"
 
 RWTexture2D<float4> Result;
 float4 _DirectionalLight;
@@ -8,9 +9,6 @@ float4x4 _CameraToWorld;
 float4x4 _CameraInverseProjection;
 int _Operation;
 float _Time;
-
-Texture2D<float4> _StarTexture;
-SamplerState sampler_StarTexture;
 
 Texture2D<float4> _PlanetTexture;
 SamplerState sampler_PlanetTexture;
@@ -209,22 +207,39 @@ float3 CalculateNormals(float3 pos)
     return normalize(V1 - V2);
 }
 
+float StarNoise(float4 p)
+{
+    float sum = 0;
+    float amp = 1;
+    float scale = 1;
+
+    for (int i = 0; i < 6; i++)
+    {
+        sum += snoise(p * scale) * amp;
+        p.w += 100.0f;
+        amp *= 0.9f;
+        scale *= 2;
+    }
+
+    return sum;
+}
+
 float3 Transformations(float3 origin, Mesh mesh)
 {
     if (mesh.meshID > 0)
     {
         //Rotate around the star
         origin.xz = mul(Rotate(_Time * 6), origin.xz - mesh.position.xz) + mesh.position.xz;
-        origin -= float3(25, 0, 0);
+        origin -= float3(40, 0, 0);
 
         //Axial tilt
-        //origin.xy = mul(Rotate(-0.25f), origin.xy - mesh.position.xy) + mesh.position.xy;
+        origin.xy = mul(Rotate(-0.25f), origin.xy - mesh.position.xy) + mesh.position.xy;
     }
 
     if (mesh.meshID == 3)
     {
         origin.xz = mul(Rotate(_Time * 15), origin.xz - mesh.position.xz) + mesh.position.xz;
-        origin -= float3(12, 0, 0);
+        origin -= float3(10, 0, 0);
         origin.xz = mul(Rotate(_Time * 8), origin.xz - mesh.position.xz) + mesh.position.xz;
     }
     else if (mesh.meshID == 1 || mesh.meshID == 2)
@@ -291,13 +306,9 @@ float4 CreateTextures(Ray ray)
 
             if (mesh.meshID == 0)
             {
-                XY = _StarTexture.SampleLevel(sampler_StarTexture, HitPoint.xy * 0.5f + 0.5f, 0).xyz;
-                XZ = _StarTexture.SampleLevel(sampler_StarTexture, HitPoint.xz * 0.5f + 0.5f, 0).xyz;
-                YZ = _StarTexture.SampleLevel(sampler_StarTexture, HitPoint.yz * 0.5f + 0.5f, 0).xyz;
+                float noise = StarNoise(float4(HitPoint, _Time * 0.5f));
 
-                float3 col = (XY * normals.z) + (XZ * normals.y) + (YZ * normals.x);
-
-                GlobalColor = col * float3(1, 1, 0);
+                GlobalColor = lerp(float3(0, 0.4f, 1), float3(0, 0.6f, 1), noise);
             }
             else if (mesh.meshID == 1)
             {

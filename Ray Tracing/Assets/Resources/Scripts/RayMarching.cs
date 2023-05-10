@@ -5,7 +5,6 @@ public class RayMarching : MonoBehaviour
 {
     public ComputeShader CompShader;
     public Light DirectionalLight;
-    public Texture StarTexture;
     public Texture PlanetTexture;
     public Texture PlanetHeightTexture;
     public Texture PlanetNormalTexture;
@@ -65,7 +64,6 @@ public class RayMarching : MonoBehaviour
         CompShader.SetVector("_Time", Shader.GetGlobalVector("_Time"));
         CompShader.SetMatrix("_CameraToWorld", cam.cameraToWorldMatrix);
         CompShader.SetMatrix("_CameraInverseProjection", cam.projectionMatrix.inverse);
-        CompShader.SetTexture(0, "_StarTexture", StarTexture);
         CompShader.SetTexture(0, "_PlanetTexture", PlanetTexture);
         CompShader.SetTexture(0, "_PlanetHeightTexture", PlanetHeightTexture);
         CompShader.SetTexture(0, "_PlanetNormalTexture", PlanetNormalTexture);
@@ -109,11 +107,11 @@ public class RayMarching : MonoBehaviour
         //Star
         MeshList.Add(new Mesh() { MeshID = 0, Shape = 0, Size = new Vector3(5, 5, 5), Position = new Vector3(0, 0, 10) });
 
-        //Red Planet
-        MeshList.Add(new Mesh() { MeshID = 1, Shape = 0, Size = new Vector3(3, 3, 3), Position = new Vector3(0, 0, 10) });
+        //Planet
+        MeshList.Add(new Mesh() { MeshID = 1, Shape = 0, Size = new Vector3(2.0f, 2.0f, 2.0f), Position = new Vector3(0, 0, 10) });
 
-        //Orange Planetary Ring
-        MeshList.Add(new Mesh() { MeshID = 2, Shape = 3, Size = new Vector3(8.0f, 2.5f, 8.0f), Position = new Vector3(0, 0, 10) });
+        //Planetary Ring
+        MeshList.Add(new Mesh() { MeshID = 2, Shape = 3, Size = new Vector3(6.0f, 2.5f, 6.0f), Position = new Vector3(0, 0, 10) });
 
         //Moon
         MeshList.Add(new Mesh() { MeshID = 3, Shape = 0, Size = new Vector3(1, 1, 1), Position = new Vector3(0, 0, 10) });
