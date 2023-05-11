@@ -104,17 +104,20 @@ public class RayMarching : MonoBehaviour
 
     private void SetupScene()
     {
-        //Star
+        //Blue star
         MeshList.Add(new Mesh() { MeshID = 0, Shape = 0, Size = new Vector3(5, 5, 5), Position = new Vector3(0, 0, 10) });
 
+        //Red dwarf star
+        MeshList.Add(new Mesh() { MeshID = 1, Shape = 0, Size = new Vector3(3, 3, 3), Position = new Vector3(0, 0, 10) });
+
         //Planet
-        MeshList.Add(new Mesh() { MeshID = 1, Shape = 0, Size = new Vector3(2.0f, 2.0f, 2.0f), Position = new Vector3(0, 0, 10) });
+        MeshList.Add(new Mesh() { MeshID = 2, Shape = 0, Size = new Vector3(2.0f, 2.0f, 2.0f), Position = new Vector3(0, 0, 10) });
 
         //Planetary Ring
-        MeshList.Add(new Mesh() { MeshID = 2, Shape = 3, Size = new Vector3(6.0f, 2.5f, 6.0f), Position = new Vector3(0, 0, 10) });
+        MeshList.Add(new Mesh() { MeshID = 3, Shape = 3, Size = new Vector3(6.0f, 2.5f, 6.0f), Position = new Vector3(0, 0, 10) });
 
         //Moon
-        MeshList.Add(new Mesh() { MeshID = 3, Shape = 0, Size = new Vector3(1, 1, 1), Position = new Vector3(0, 0, 10) });
+        MeshList.Add(new Mesh() { MeshID = 4, Shape = 0, Size = new Vector3(1, 1, 1), Position = new Vector3(0, 0, 10) });
 
         ComputeBuffer buffer = new ComputeBuffer(MeshList.Count, 32);
         buffer.SetData(MeshList);
