@@ -224,6 +224,25 @@ float StarNoise(float4 p)
     return sum;
 }
 
+float3 BrightnessToColor(float b, int ID)
+{
+    float Offset = 0.25f;
+    float c = 0;
+
+    b *= Offset;
+
+    if (ID == 0)
+    {
+        c = 0.5f;
+        return (float3(b * b * b * b, b * b, b) / Offset) * c;
+    }
+    else
+    {
+        c = 0.4f;
+        return (float3(b, b * b, b * b * b * b) / Offset) * c;
+    }
+}
+
 float3 Transformations(float3 origin, Mesh mesh)
 {
     //Blue star
@@ -325,12 +344,13 @@ float4 CreateTextures(Ray ray)
 
             if (mesh.meshID < 2)
             {
-                float noise = StarNoise(float4(HitPoint, _Time * 0.5f));
-                
-                if (mesh.meshID == 0)
-                    GlobalColor = lerp(float3(0, 0.4f, 1), float3(0, 0.6f, 1), noise);
-                else if (mesh.meshID == 1)
-                    GlobalColor = lerp(float3(1, 0.2f, 0), float3(1, 0.5f, 0), noise);
+                float noise = StarNoise(float4(HitPoint, _Time * 0.8f));
+                float spots = mix(1, snoise(float4(HitPoint * 0.3f, _Time * 0.6f)), 0.65f);
+                float b = max(noise * spots, 0);
+
+                b = b * 4.0f + 1;
+
+                GlobalColor = BrightnessToColor(b, mesh.meshID);
             }
             else if (mesh.meshID == 2)
             {
