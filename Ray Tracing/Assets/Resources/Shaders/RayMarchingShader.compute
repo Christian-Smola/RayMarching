@@ -77,6 +77,11 @@ float2x2 Rotate(float a)
     return float2x2(c, -s, s, c);
 }
 
+float Fresnel(float3 dir, float3 n)
+{
+    return pow(1 - saturate(dot(normalize(n), normalize(dir))), 3);
+}
+
 float mix(float x, float y, float a)
 {
     return x * (1 - a) + y * a;
@@ -349,6 +354,15 @@ float4 CreateTextures(Ray ray)
                 float b = max(noise * spots, 0);
 
                 b = b * 4.0f + 1;
+
+                float3 FresnelNormals = -normals;
+
+                //Counter act the mesh's rotation
+                FresnelNormals.xz = mul(Rotate(-_Time * 5.5f), FresnelNormals.xz);
+
+                float fres = Fresnel(NewRay.direction, FresnelNormals);
+
+                b += fres;
 
                 GlobalColor = BrightnessToColor(b, mesh.meshID);
             }
