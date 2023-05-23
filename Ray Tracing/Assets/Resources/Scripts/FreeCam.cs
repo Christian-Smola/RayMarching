@@ -6,10 +6,10 @@ public class FreeCam : MonoBehaviour
 {
     private Vector2 CursorStartPosition;
 
-
     // Update is called once per frame
     void Update()
     {
+        //Allows the player to move the camera around the scene
         if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
             CursorStartPosition = Input.mousePosition;
 
